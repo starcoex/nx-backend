@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+  // binaryTargets = ["native", "debian-openssl-1.1.x"]
+  output   = "../../../node_modules/@prisma-clients/auth"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AUTH_DATABASE_URL")
+}
+
+// Role Enum 추가
+enum Role {
+  USER
+  ADMIN
+  DELIVERY
+}
+
+// 모델들
+model Avatar {
+  id           Int      @id @default(autoincrement())
+  publicId     String // 필드 이름 변경
+  url          String
+  user         User?    @relation(fields: [avatarUserId], references: [id]) // 관계 명확화
+  avatarUserId Int?     @unique // 필드 명칭 개선
+  createdAt    DateTime @default(now()) // 반복되지만 명시적으로 유지
+  updatedAt    DateTime @updatedAt
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  name         String
+  email        String      @unique
+  password     String
+  phoneNumber  String      @unique // Camel Case 수정
+  address      String?
+  roles        Role?       @default(USER) // Role Enum으로 변경
+  isActive     Boolean     @default(false) // 명칭 변경
+  rememberMe   Boolean?    @default(false) // 더 간결한 필드명
+  avatar       Avatar?
+  activation   Activation?
+  accessToken  String? // Camel Case로 변경
+  refreshToken String? // Camel Case로 변경
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Activation {
+  id                 Int      @id @default(autoincrement())
+  activationCode     String? // 필드 이름 변경
+  activationToken    String? // 필드 이름 변경
+  requestedEmail     String?
+  twoFactorSecret    String?
+  twoFactorActivated Boolean? @default(false)
+  user               User?    @relation(fields: [activationUserId], references: [id], onDelete: Cascade) // 관계 명확화
+  activationUserId   Int?     @unique // 필드 명칭 개선
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

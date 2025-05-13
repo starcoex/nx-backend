@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package uploads;
+
+service FileUploadService {
+  // 파일 업로드를 처리하는 서비스 정의
+  rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse);
+}
+
+message UploadFileRequest {
+  // 파일 데이터 조각 (chunk 단위)
+  bytes chunk = 1;
+  // 업로드할 파일 이름
+  string filename = 2;
+}
+
+message UploadFileResponse {
+  // 업로드 결과 메시지
+  string message = 1;
+  // 업로드된 파일 경로
+  string filePath = 2;
+}

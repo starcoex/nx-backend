@@ -1,0 +1,8 @@
+{
+  "name": "@nx-backend/prisma",
+  "version": "0.0.0",
+  "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "prisma": "^6.7.0"
+  }
+}

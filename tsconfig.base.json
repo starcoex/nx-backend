@@ -14,7 +14,13 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@nx-backend/graphql": ["libs/graphql/src/index.ts"],
+      "@nx-backend/grpc": ["libs/grpc/src/index.ts"],
+      "@nx-backend/nestjs": ["libs/nestjs/src/index.ts"],
+      "@nx-backend/prisma": ["libs/prisma/src/index.ts"],
+      "@nx-backend/pulsar": ["libs/pulsar/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
