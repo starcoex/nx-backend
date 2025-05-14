@@ -1,0 +1,7 @@
+{
+  "name": "@nx-backend/pulsar",
+  "version": "0.0.0",
+  "dependencies": {
+    "pulsar-client": "^1.12.0"
+  }
+}

@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
-import { TokenPayload } from '@starcoex-backend/graphql';
+import { TokenPayload } from '@nx-backend/graphql';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -27,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         },
         // request?.cookies?.Authentication || request.accessToken,
       ]),
-      secretOrKey: configService.getOrThrow('AUTH_JWT_ACCESS_TOKEN_SECRET'),
+      secretOrKey: configService.getOrThrow('AUTH_JWT_SECRET'),
     });
   }
 

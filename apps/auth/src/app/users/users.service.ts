@@ -47,21 +47,20 @@ import {
 } from './dto/password-change.input';
 
 @Injectable()
-export class UsersService implements OnModuleInit {
+export class UsersService {
   private notificationsService: NotificationsServiceClient;
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    @Inject(Packages.NOTIFICATIONS) private readonly client: ClientGrpc
+    private readonly configService: ConfigService // @Inject(Packages.NOTIFICATIONS) private readonly client: ClientGrpc
   ) {}
 
-  onModuleInit() {
-    this.notificationsService =
-      this.client.getService<NotificationsServiceClient>(
-        NOTIFICATIONS_SERVICE_NAME
-      );
-  }
+  // onModuleInit() {
+  //   this.notificationsService =
+  //     this.client.getService<NotificationsServiceClient>(
+  //       NOTIFICATIONS_SERVICE_NAME
+  //     );
+  // }
 
   private validatePassword(
     password: string,
@@ -168,17 +167,18 @@ export class UsersService implements OnModuleInit {
           activationUserId: user.id,
         },
       });
-      await this.notifyEmailVerification(
-        user,
-        activationCode,
-        'TEXT2',
-        join(__dirname, '../../', '/email-templates/activation-mail.ejs')
-      ).catch((e) =>
-        console.error(
-          `이메일 전송에 실패했습니다. 유저 ID: ${user.id}, 오류:`,
-          e
-        )
-      );
+      // await this.notifyEmailVerification(
+      //   user,
+      //   activationCode,
+      //   'TEXT2',
+      //   join(__dirname, '../../', '/email-templates/activation-mail.ejs')
+      // ).catch((e) =>
+      //   console.error(
+      //     `이메일 전송에 실패했습니다. 유저 ID: ${user.id}, 오류:`,
+      //     e
+      //   )
+      // );
+
       return { ok: true, user, activationCode, activationToken };
     } catch (e) {
       return {
@@ -610,7 +610,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async getUser(args: Prisma.UserWhereUniqueInput) {
-    return this.prismaService.user.findUnique({ where: args });
+    return this.prismaService.user.findUniqueOrThrow({ where: args });
   }
 
   async getLoggedInUser(userId: number) {

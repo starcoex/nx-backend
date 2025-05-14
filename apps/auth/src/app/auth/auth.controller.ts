@@ -4,11 +4,11 @@ import {
   AuthServiceControllerMethods,
   GrpcLoggingInterceptor,
   User,
-} from '@starcoex-backend/grpc';
+} from '@nx-backend/grpc';
 import { Controller, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
-import { TokenPayload } from '@starcoex-backend/graphql';
+import { TokenPayload } from '@nx-backend/graphql';
 
 @Controller()
 @AuthServiceControllerMethods()
@@ -21,6 +21,6 @@ export class AuthController implements AuthServiceController {
     request: AuthenticateRequest & { user: TokenPayload }
   ): Promise<User> {
     const user: TokenPayload = request['user'];
-    return this.usersService.getUser({ id: user.id });
+    return this.usersService.getUser({ id: user.userId });
   }
 }

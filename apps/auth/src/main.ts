@@ -26,15 +26,15 @@ async function bootstrap() {
   });
   app.useLogger(app.get(PinoLogger));
   const port = app.get(ConfigService).getOrThrow('AUTH_PORT') || 4000;
-  app.connectMicroservice<GrpcOptions>({
-    transport: Transport.GRPC,
-    options: {
-      // url: app.get(ConfigService).getOrThrow('AUTH_GRPC_SERVICE_URL'),
-      package: Packages.AUTH,
-      protoPath: join(__dirname, '../../libs/grpc/proto/auth.proto'),
-    },
-  });
-  await app.startAllMicroservices();
+  // app.connectMicroservice<GrpcOptions>({
+  //   transport: Transport.GRPC,
+  //   options: {
+  //     // url: app.get(ConfigService).getOrThrow('AUTH_GRPC_SERVICE_URL'),
+  //     package: Packages.AUTH,
+  //     protoPath: join(__dirname, '../../libs/grpc/proto/auth.proto'),
+  //   },
+  // });
+  // await app.startAllMicroservices();
   await app.listen(port);
 
   app

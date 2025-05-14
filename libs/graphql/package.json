@@ -2,10 +2,10 @@
   "name": "@nx-backend/graphql",
   "version": "0.0.0",
   "dependencies": {
-    "@apollo/server": "^4.12.0",
+    "@apollo/server": "^4.11.2",
     "@nestjs/apollo": "^13.1.0",
     "@nestjs/graphql": "^13.1.0",
-    "graphql": "^16.11.0",
+    "graphql": "^16.10.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

@@ -9,8 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { User } from '../users/entities/user.entity';
 import { RefreshTokensOutput } from './dto/tokens-input';
 import { TwoFactorInput, TwoFactorOutput } from './dto/two-factor.input';
 import * as speakeasy from 'speakeasy';
@@ -19,6 +17,7 @@ import {
   ToggleTwoFactorAuthOutput,
 } from './dto/toggle-two-factor-auth.input';
 import QRCode = require('qrcode');
+import { TokenPayload } from '@nx-backend/graphql';
 
 @Injectable()
 export class AuthService {
@@ -39,63 +38,27 @@ export class AuthService {
   }
 
   generateTokens(
-    userId: number,
+    tokenPayload: TokenPayload,
     rememberMe: boolean
   ): {
     accessToken: string;
-    refreshToken: string;
     accessExpirationDate: Date;
-    refreshExpirationDate: Date;
   } {
     const accessTokenKey = rememberMe
       ? 'AUTH_JWT_REMEMBER_ME_ACCESS_EXPIRATION'
       : 'AUTH_JWT_ACCESS_EXPIRATION';
-    const refreshTokenKey = rememberMe
-      ? 'AUTH_JWT_REMEMBER_ME_REFRESH_EXPIRATION'
-      : 'AUTH_JWT_REFRESH_EXPIRATION';
+
     const accessExpirationDate = this.calculateExpirationDate(accessTokenKey);
-    const refreshExpirationDate = this.calculateExpirationDate(refreshTokenKey);
-
-    const accessToken = this.jwtService.sign(
-      { id: userId },
-      {
-        secret: this.configService.getOrThrow('AUTH_JWT_ACCESS_TOKEN_SECRET'),
-        expiresIn: `${this.configService.getOrThrow(accessTokenKey)}s`,
-      }
-    );
-
-    const refreshToken = this.jwtService.sign(
-      { id: userId },
-      {
-        secret: this.configService.getOrThrow('AUTH_JWT_REFRESH_TOKEN_SECRET'),
-        expiresIn: `${this.configService.getOrThrow(refreshTokenKey)}s`,
-      }
-    );
+    const accessToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.getOrThrow('AUTH_JWT_ACCESS_TOKEN_SECRET'),
+      expiresIn: `${this.configService.getOrThrow(accessTokenKey)}s`,
+    });
     return {
       accessToken,
-      refreshToken,
       accessExpirationDate,
-      refreshExpirationDate,
     };
   }
 
-  async updateRefreshToken(
-    userId: number,
-    refreshToken: string
-  ): Promise<User> {
-    try {
-      const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-      return this.prismaService.user.update({
-        where: { id: userId },
-        data: {
-          refreshToken: hashedRefreshToken,
-        },
-      });
-    } catch (e) {
-      console.error('Update refresh token error:', e);
-      throw new UnauthorizedException('재발급 토큰이 유효하지 않습니다.');
-    }
-  }
   private setHttpOnlyCookie(
     response: Response,
     tokenName: string,
@@ -104,7 +67,7 @@ export class AuthService {
   ): void {
     response.cookie(tokenName, tokenValue, {
       httpOnly: true,
-      secure: this.configService.get('NODE_ENV') !== 'development',
+      secure: this.configService.get('NODE_ENV') === 'production',
       expires: expirationDate,
     });
   }
@@ -114,43 +77,25 @@ export class AuthService {
     password: string,
     rememberMe: boolean
   ) {
-    const user = await this.usersService.getUser({ email });
-    await this.usersService.validateUserPassword(user, password);
-    await this.usersService.updateUserRememberMe(user.id, rememberMe);
-    return user;
-  }
-
-  async verifyUserRefreshToken(refreshToken: string, userId: number) {
-    const decoded = (await this.jwtService.decode(refreshToken)) as {
-      id?: number;
-    };
-    if (!decoded || !decoded.id) {
-      throw new UnauthorizedException('유효하지 않은 새로 고침 토큰입니다.');
+    try {
+      const user = await this.usersService.getUser({ email });
+      await this.usersService.validateUserPassword(user, password);
+      await this.usersService.updateUserRememberMe(user.id, rememberMe);
+      return user;
+    } catch (err) {
+      throw new UnauthorizedException('자격증명이 유효하지 않습니다.');
     }
-    const user = await this.usersService.getUser({ id: userId });
-    const authenticated = bcrypt.compare(refreshToken, user.refreshToken);
-    if (!authenticated) {
-      throw new UnauthorizedException('재발급 토큰이 유효하지 않습니다.');
-    }
-    return user;
   }
 
   private async generateAndSaveTokens(
-    userId: number,
+    tokenPayload: TokenPayload,
     rememberMe: boolean
   ): Promise<{
     accessToken: string;
-    refreshToken: string;
     accessExpirationDate: Date;
-    refreshExpirationDate: Date;
   }> {
     // Generate tokens
-    const tokens = this.generateTokens(userId, rememberMe);
-
-    // Save hashed refresh token
-    await this.updateRefreshToken(userId, tokens.refreshToken);
-
-    return tokens;
+    return this.generateTokens(tokenPayload, rememberMe);
   }
 
   async preCheckLogin(email: string, password: string, rememberMe: boolean) {
@@ -178,7 +123,6 @@ export class AuthService {
   ): Promise<LoginOutput> {
     try {
       const { email, password, rememberMe } = loginInput;
-      console.log('loginInput', loginInput);
       const { twoFactorActivated } = await this.preCheckLogin(
         email,
         password,
@@ -186,10 +130,6 @@ export class AuthService {
       );
       await this.usersService.validateUserExists(email, '사용자가 없습니다.');
       const user = await this.verifyUser(email, password, rememberMe);
-      const newUser = await this.prismaService.user.findUnique({
-        where: { id: user.id },
-        include: { activation: true },
-      });
       if (!user.isActive) {
         return { ok: false, error: '이메일 인증이 안 되었습니다.' };
       }
@@ -201,20 +141,15 @@ export class AuthService {
         where: { id: user.id },
         data: { rememberMe },
       });
-
-      const tokens = await this.generateAndSaveTokens(user.id, rememberMe);
+      const tokenPayload: TokenPayload = { userId: user.id };
+      const tokens = await this.generateAndSaveTokens(tokenPayload, rememberMe);
       this.setHttpOnlyCookie(
         res,
         'Authentication',
         tokens.accessToken,
         tokens.accessExpirationDate
       );
-      this.setHttpOnlyCookie(
-        res,
-        'Refresh',
-        tokens.refreshToken,
-        tokens.refreshExpirationDate
-      );
+
       if (redirect) {
         res.redirect(this.configService.getOrThrow('AUTH_UI_REDIRECT'));
       }
@@ -237,13 +172,13 @@ export class AuthService {
         );
         return {
           ok: true,
-          user: newUser,
+          user,
           activation,
           twoFactorRequired: true,
           twoFactorToken, // 클라이언트에서 이를 통해 2FA 인증 페이지로 이동
         };
       }
-      return { ok: true, ...tokens, twoFactorRequired: false, user: newUser };
+      return { ok: true, ...tokens, twoFactorRequired: false, user };
     } catch (e) {
       console.error('Login error:', e); // 디버깅을 위한 로깅
       // NestJS HttpException 처리
@@ -254,41 +189,6 @@ export class AuthService {
         return { ok: false, error: e.message };
       }
       return { ok: false, error: '메일 또는 비밀번호가 틀립니다.' };
-    }
-  }
-
-  async refreshToken(
-    userId: number,
-    rememberMe: boolean,
-    res: Response
-  ): Promise<RefreshTokensOutput> {
-    try {
-      const user = await this.usersService.getUser({ id: userId });
-      const updateTokens = await this.generateAndSaveTokens(
-        user.id,
-        rememberMe
-      );
-      await this.prismaService.user.update({
-        where: { id: user.id },
-        data: { rememberMe },
-      });
-      this.setHttpOnlyCookie(
-        res,
-        'Authentication',
-        updateTokens.accessToken,
-        updateTokens.accessExpirationDate
-      );
-      this.setHttpOnlyCookie(
-        res,
-        'Refresh',
-        updateTokens.refreshToken,
-        updateTokens.refreshExpirationDate
-      );
-
-      return { ok: true, ...updateTokens };
-    } catch (e) {
-      console.error('Refresh token error:', e);
-      return { ok: false, error: e };
     }
   }
 
@@ -364,7 +264,8 @@ export class AuthService {
       if (!verified) {
         return { ok: false, error: '잘못된 2FA 코드입니다.' };
       }
-      const tokens = await this.generateAndSaveTokens(user.id, rememberMe);
+      const tokenPayload: TokenPayload = { userId: user.id };
+      const tokens = await this.generateAndSaveTokens(tokenPayload, rememberMe);
 
       await this.prismaService.user.update({
         where: { id: user.id },
@@ -375,12 +276,6 @@ export class AuthService {
         'Authentication',
         tokens.accessToken,
         tokens.accessExpirationDate
-      );
-      this.setHttpOnlyCookie(
-        res,
-        'Refresh',
-        tokens.refreshToken,
-        tokens.refreshExpirationDate
       );
       if (redirect) {
         res.redirect(this.configService.getOrThrow('AUTH_UI_REDIRECT'));
