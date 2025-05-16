@@ -1,0 +1,11 @@
+{
+  "name": "@nx-backend/jobs",
+  "version": "0.0.0",
+  "dependencies": {
+    "@golevelup/nestjs-discovery": "^5.0.0",
+    "graphql-type-json": "^0.3.2"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.12"
+  }
+}
