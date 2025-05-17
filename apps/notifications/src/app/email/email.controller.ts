@@ -4,7 +4,7 @@ import {
   GrpcLoggingInterceptor,
   NotificationsServiceController,
   NotificationsServiceControllerMethods,
-} from '@starcoex-backend/grpc';
+} from '@nx-backend/grpc';
 import { MailgunEmailInput } from './dto/mailgun-email.input';
 
 @Controller()
@@ -14,6 +14,6 @@ export class EmailController implements NotificationsServiceController {
   constructor(private readonly emailService: EmailService) {}
 
   async notifyEmail(data: MailgunEmailInput) {
-    await this.emailService.notifyEmail(data);
+    return this.emailService.notifyEmail(data);
   }
 }

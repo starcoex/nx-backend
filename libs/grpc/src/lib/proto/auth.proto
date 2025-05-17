@@ -8,7 +8,6 @@ service AuthService {
 
 message AuthenticateRequest {
   string accessToken = 1;
-  string refreshToken = 2;
 }
 
 service UserService {
@@ -22,5 +21,4 @@ message UserIdRequest {
 message User {
   int32 id = 1;
   string email = 2;
-  string name = 3;
 }

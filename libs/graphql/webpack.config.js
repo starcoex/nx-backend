@@ -3,15 +3,16 @@ const { join } = require('path');
 
 module.exports = {
   output: {
-    path: join(__dirname, '../../dist/libs/grpc'),
+    path: join(__dirname, '../../dist/libs/graphql'),
+    libraryTarget: 'commonjs2',
   },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
       compiler: 'tsc',
+      outputFileName: 'index.ts',
       main: './src/index.ts',
       tsConfig: './tsconfig.lib.json',
-      assets: ['./src/assets'],
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,

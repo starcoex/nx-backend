@@ -11,23 +11,23 @@ import { JwtService } from '@nestjs/jwt';
 @Module({
   imports: [
     PrismaModule,
-    // ClientsModule.registerAsync([
-    //   {
-    //     name: Packages.NOTIFICATIONS,
-    //     useFactory: (configService: ConfigService) => ({
-    //       transport: Transport.GRPC,
-    //       options: {
-    //         url: configService.getOrThrow('NOTIFICATIONS_GRPC_URL'),
-    //         package: Packages.NOTIFICATIONS,
-    //         protoPath: join(
-    //           __dirname,
-    //           '../../libs/grpc/proto/notifications.proto'
-    //         ),
-    //       },
-    //     }),
-    //     inject: [ConfigService],
-    //   },
-    // ]),
+    ClientsModule.registerAsync([
+      {
+        name: Packages.NOTIFICATIONS,
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.GRPC,
+          options: {
+            url: configService.getOrThrow('NOTIFICATIONS_GRPC_URL'),
+            package: Packages.NOTIFICATIONS,
+            protoPath: join(
+              __dirname,
+              '../../libs/grpc/proto/notifications.proto'
+            ),
+          },
+        }),
+        inject: [ConfigService],
+      },
+    ]),
   ],
   providers: [UsersResolver, UsersService, JwtService],
   exports: [UsersService],

@@ -1,16 +1,13 @@
 {
-  "name": "@starcoex-backend/notifications",
+  "name": "@nx-backend/notifications",
   "version": "0.0.0",
-  "scripts": {
-    "build": "nest build && npm run copy-templates",
-    "copy-templates": "mkdir -p dist/email-templates && cp -R src/app/email/email-templates dist/email-templates"
-  },
+  "scripts": {},
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
     "ejs": "^3.1.10",
-    "mailgun.js": "^11.1.0",
-    "nodemailer": "^6.10.0",
-    "nestjs-mailgun": "^4.0.3"
+    "mailgun.js": "^12.0.1",
+    "nestjs-mailgun": "^4.0.3",
+    "nodemailer": "^7.0.3"
   },
   "devDependencies": {
     "@types/nodemailer": "^6.4.17"

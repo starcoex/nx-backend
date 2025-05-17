@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { EmailService } from './email.service';
 import { EmailController } from './email.controller';
-import { MailgunModule } from 'nestjs-mailgun';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { MailgunModule } from 'nestjs-mailgun';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
@@ -42,7 +42,7 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
         publicKey: configService.getOrThrow('MAILGUN_PUBLIC_KEY'),
       }),
       inject: [ConfigService],
-    }),
+    }) as unknown as DynamicModule,
   ],
   controllers: [EmailController],
   providers: [EmailService],

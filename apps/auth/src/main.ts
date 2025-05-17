@@ -2,7 +2,7 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
-
+require('module-alias/register');
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
@@ -26,15 +26,15 @@ async function bootstrap() {
   });
   app.useLogger(app.get(PinoLogger));
   const port = app.get(ConfigService).getOrThrow('AUTH_PORT') || 4000;
-  // app.connectMicroservice<GrpcOptions>({
-  //   transport: Transport.GRPC,
-  //   options: {
-  //     // url: app.get(ConfigService).getOrThrow('AUTH_GRPC_SERVICE_URL'),
-  //     package: Packages.AUTH,
-  //     protoPath: join(__dirname, '../../libs/grpc/proto/auth.proto'),
-  //   },
-  // });
-  // await app.startAllMicroservices();
+  app.connectMicroservice<GrpcOptions>({
+    transport: Transport.GRPC,
+    options: {
+      url: app.get(ConfigService).getOrThrow('AUTH_GRPC_SERVICE_URL'),
+      package: Packages.AUTH,
+      protoPath: join(__dirname, '../../libs/grpc/proto/auth.proto'),
+    },
+  });
+  await app.startAllMicroservices();
   await app.listen(port);
 
   app

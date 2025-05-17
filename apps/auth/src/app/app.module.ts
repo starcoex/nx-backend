@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { LoggerModule } from '@nx-backend/nestjs';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GqlLoggingPlugin } from '@nx-backend/graphql';
 
 @Module({
   imports: [
@@ -20,7 +21,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         cors: true,
         playground: false,
         context: ({ req, res }) => ({ req, res }),
-        plugins: [ApolloServerPluginLandingPageLocalDefault()],
+        plugins: [
+          ApolloServerPluginLandingPageLocalDefault(),
+          new GqlLoggingPlugin(),
+        ],
       }),
       inject: [ConfigService],
     }),

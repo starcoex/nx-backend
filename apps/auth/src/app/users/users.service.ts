@@ -47,20 +47,21 @@ import {
 } from './dto/password-change.input';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   private notificationsService: NotificationsServiceClient;
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService // @Inject(Packages.NOTIFICATIONS) private readonly client: ClientGrpc
+    private readonly configService: ConfigService,
+    @Inject(Packages.NOTIFICATIONS) private readonly client: ClientGrpc
   ) {}
 
-  // onModuleInit() {
-  //   this.notificationsService =
-  //     this.client.getService<NotificationsServiceClient>(
-  //       NOTIFICATIONS_SERVICE_NAME
-  //     );
-  // }
+  onModuleInit() {
+    this.notificationsService =
+      this.client.getService<NotificationsServiceClient>(
+        NOTIFICATIONS_SERVICE_NAME
+      );
+  }
 
   private validatePassword(
     password: string,
@@ -149,37 +150,99 @@ export class UsersService {
       // 비밀번호 검증
       this.validatePassword(password, passwordConfirmation);
 
-      const user = await this.prismaService.user.create({
-        data: {
-          email,
-          phoneNumber: formattedPhoneNumber,
-          password: passwordHash,
-          name,
-          roles,
-        },
-      });
-      const { activationToken, activationCode } =
-        await this.createActivationToken(user.id);
-      await this.prismaService.activation.create({
-        data: {
+      const result = await this.prismaService.$transaction(async (tx) => {
+        // Step 1: 사용자 생성
+        const user = await tx.user.create({
+          data: {
+            email,
+            phoneNumber: formattedPhoneNumber,
+            password: passwordHash,
+            name,
+            roles,
+          },
+        });
+
+        // Step 2: 활성화 토큰 생성
+        const { activationToken, activationCode } =
+          await this.createActivationToken(user.id);
+
+        // Step 3: 활성화 데이터 저장
+        await tx.activation.create({
+          data: {
+            activationCode,
+            activationToken,
+            activationUserId: user.id,
+          },
+        });
+
+        // Step 4: 이메일 전송 시도
+        const emailSend = await this.notifyEmailVerification(
+          user,
           activationCode,
-          activationToken,
-          activationUserId: user.id,
-        },
+          'TEXT2',
+          join(
+            __dirname,
+            '../../',
+            '/apps/notifications/email-templates/activation-mail.ejs'
+          )
+        )
+          .then(() => true)
+          .catch((error) => {
+            console.error('이메일 전송 실패:', error);
+            return false;
+          });
+
+        // 이메일 전송 실패 시 트랜잭션 중단
+        if (!emailSend) {
+          // return {
+          //   ok: false,
+          //   error: '이메일 전송에 실패했습니다.',
+          // };
+          throw new Error(`이메일 전송에 실패했습니다. 유저 ID: ${user.id}`);
+        }
+        return { ok: true, user, activationCode, activationToken };
       });
+
+      // const user = await this.prismaService.user.create({
+      //   data: {
+      //     email,
+      //     phoneNumber: formattedPhoneNumber,
+      //     password: passwordHash,
+      //     name,
+      //     roles,
+      //   },
+      // });
+      // const { activationToken, activationCode } =
+      //   await this.createActivationToken(user.id);
+      //
+      // await this.prismaService.activation.create({
+      //   data: {
+      //     activationCode,
+      //     activationToken,
+      //     activationUserId: user.id,
+      //   },
+      // });
       // await this.notifyEmailVerification(
       //   user,
       //   activationCode,
       //   'TEXT2',
-      //   join(__dirname, '../../', '/email-templates/activation-mail.ejs')
+      //   join(
+      //     __dirname,
+      //     '../../',
+      //     '/apps/notifications/email-templates/activation-mail.ejs'
+      //   )
       // ).catch((e) =>
       //   console.error(
       //     `이메일 전송에 실패했습니다. 유저 ID: ${user.id}, 오류:`,
       //     e
       //   )
       // );
+      //
+      // return { ok: true, user, activationCode, activationToken };
 
-      return { ok: true, user, activationCode, activationToken };
+      console.log('result', result);
+      // 트랜잭션 결과 반환
+      return result;
     } catch (e) {
       return {
         ok: false,
